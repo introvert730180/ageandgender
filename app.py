@@ -2,80 +2,64 @@ import streamlit as st
 import cv2
 import numpy as np
 
-# Set up OpenCV VideoCapture object
-cap = cv2.VideoCapture(0)
-cap.set(3, 480) # set width
-cap.set(4, 640) # set height
-
-# Define model and lists for age and gender prediction
+# Load pre-trained models
 MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
-age_list = ['(0, 2)', '(4, 6)', '(8, 12)', '(15, 20)', '(25, 32)', '(38, 43)', '(48, 53)', '(60, 100)']
+age_list = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
 gender_list = ['Male', 'Female']
 
-# Initialize Caffe models for age and gender prediction
+# Initialize OpenCV DNN models
 def initialize_caffe_models():
-    age_net = cv2.dnn.readNetFromCaffe('data/deploy_age.prototxt', 'data/age_net.caffemodel')
-    gender_net = cv2.dnn.readNetFromCaffe('data/deploy_gender.prototxt', 'data/gender_net.caffemodel')
+    age_net = cv2.dnn.readNetFromCaffe('./data/deploy_age.prototxt', './data/age_net.caffemodel')
+    gender_net = cv2.dnn.readNetFromCaffe('./data/deploy_gender.prototxt', './data/gender_net.caffemodel')
     return age_net, gender_net
 
-# Function to predict age and gender from the webcam feed
-def predict_age_gender(image, age_net, gender_net):
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt.xml')
-    faces = face_cascade.detectMultiScale(gray, 1.1, 5)
+# Function to predict age and gender from an image
+def predict_age_gender(image_path, age_net, gender_net):
+    image = cv2.imread(image_path)
+    blob = cv2.dnn.blobFromImage(image, 1, (227, 227), MODEL_MEAN_VALUES, swapRB=False)
 
-    for (x, y, w, h) in faces:
-        cv2.rectangle(image, (x, y), (x+w, y+h), (255, 255, 0), 2)
+    # Predict Gender
+    gender_net.setInput(blob)
+    gender_preds = gender_net.forward()
+    gender = gender_list[gender_preds[0].argmax()]
 
-        # Get face region
-        face_img = image[y:y+h, x:x+w].copy()
-        blob = cv2.dnn.blobFromImage(face_img, 1, (227, 227), MODEL_MEAN_VALUES, swapRB=False)
+    # Predict Age
+    age_net.setInput(blob)
+    age_preds = age_net.forward()
+    age = age_list[age_preds[0].argmax()]
 
-        # Predict gender
-        gender_net.setInput(blob)
-        gender_preds = gender_net.forward()
-        gender = gender_list[gender_preds[0].argmax()]
-
-        # Predict age
-        age_net.setInput(blob)
-        age_preds = age_net.forward()
-        age = age_list[age_preds[0].argmax()]
-
-        # Overlay text with gender and age prediction
-        overlay_text = f'Gender: {gender}, Age: {age}'
-        cv2.putText(image, overlay_text, (x, y), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-    return image
+    return gender, age
 
 def main():
-    st.title('Live Age and Gender Prediction')
+    st.title('Age and Gender Prediction using Caffe Models')
 
-    # Initialize Caffe models
-    age_net, gender_net = initialize_caffe_models()
+    # Sidebar file upload widget
+    st.sidebar.title('Upload Image')
+    uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-    # Main loop for capturing frames and displaying predictions
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            st.error('Error: Unable to capture frame.')
-            break
+    if uploaded_file is not None:
+        # Display the uploaded image
+        image = np.array(bytearray(uploaded_file.read()), dtype=np.uint8)
+        st.image(image, caption='Uploaded Image.', use_column_width=True)
 
-        # Predict age and gender on the frame
-        frame = predict_age_gender(frame, age_net, gender_net)
+        # Perform prediction if button is clicked
+        if st.button('Predict'):
+            # Initialize models
+            age_net, gender_net = initialize_caffe_models()
 
-        # Convert the frame to RGB (Streamlit requires RGB images)
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Save the uploaded image locally
+            image_path = 'temp_image.jpg'
+            with open(image_path, 'wb') as f:
+                f.write(uploaded_file.getbuffer())
 
-        # Display the frame in Streamlit
-        st.image(frame_rgb, channels='RGB', use_column_width=True)
+            # Predict age and gender
+            gender, age = predict_age_gender(image_path, age_net, gender_net)
 
-        # Check if the 'q' key is pressed to quit
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            # Display prediction
+            st.success(f'Predicted Gender: {gender}, Predicted Age Range: {age}')
 
-    # Release resources
-    cap.release()
+            # Remove temporary image file
+            os.remove(image_path)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
