@@ -38,7 +38,7 @@ def predict_age_gender(image, age_net, gender_net):
         age = age_list[age_preds[0].argmax()]
 
         # Display prediction
-        overlay_text = f'Gender: {gender}, Age: {age}'
+        overlay_text = f'{gender},: {age}'
         cv2.putText(image, overlay_text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
     return image
