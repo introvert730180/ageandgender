@@ -52,8 +52,16 @@ def main():
     stframe = st.empty()
 
     if uploaded_file is not None:
+        # Read the uploaded file
+        file_bytes = uploaded_file.read()
+
+        # Convert file bytes to numpy array
+        nparr = np.frombuffer(file_bytes, np.uint8)
+
+        # Decode image
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
         # Display the uploaded image
-        image = np.array(bytearray(uploaded_file.read()), dtype=np.uint8)
         st.image(image, caption='Uploaded Image.', use_column_width=True)
 
         # Perform prediction if button is clicked
@@ -61,21 +69,12 @@ def main():
             # Initialize models
             age_net, gender_net = initialize_caffe_models()
 
-            # Save the uploaded image locally
-            image_path = 'temp_image.jpg'
-            with open(image_path, 'wb') as f:
-                f.write(uploaded_file.getbuffer())
-
             # Predict age and gender
-            image = cv2.imdecode(image, cv2.IMREAD_COLOR)  # Convert bytearray to image
             frame = predict_age_gender(image, age_net, gender_net)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             # Display prediction
-            stframe.image(frame_rgb, channels='RGB', use_column_width=True)
-
-            # Remove temporary image file
-            os.remove(image_path)
+            st.image(frame_rgb, caption='Age and Gender Prediction', use_column_width=True)
 
 if __name__ == "__main__":
     main()
