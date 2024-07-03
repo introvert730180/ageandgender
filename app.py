@@ -10,8 +10,8 @@ gender_list = ['Male', 'Female']
 
 # Initialize OpenCV DNN models
 def initialize_caffe_models():
-    age_net = cv2.dnn.readNetFromCaffe('./data/deploy_age.prototxt', './data/age_net.caffemodel')
-    gender_net = cv2.dnn.readNetFromCaffe('./data/deploy_gender.prototxt', './data/gender_net.caffemodel')
+    age_net = cv2.dnn.readNetFromCaffe('data/deploy_age.prototxt', 'data/age_net.caffemodel')
+    gender_net = cv2.dnn.readNetFromCaffe('data/deploy_gender.prototxt', 'data/gender_net.caffemodel')
     return age_net, gender_net
 
 # Function to predict age and gender from an image
