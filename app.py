@@ -43,7 +43,6 @@ def predict_age_gender(image, age_net, gender_net):
 
     return image
 
-
 def main():
     st.title('Age and Gender Prediction using Caffe Models')
 
@@ -51,6 +50,7 @@ def main():
     st.sidebar.title('Upload Image')
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     stframe = st.empty()
+
     if uploaded_file is not None:
         # Display the uploaded image
         image = np.array(bytearray(uploaded_file.read()), dtype=np.uint8)
@@ -67,11 +67,12 @@ def main():
                 f.write(uploaded_file.getbuffer())
 
             # Predict age and gender
+            image = cv2.imdecode(image, cv2.IMREAD_COLOR)  # Convert bytearray to image
             frame = predict_age_gender(image, age_net, gender_net)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            stframe.image(frame_rgb, channels='RGB', use_column_width=True)
 
             # Display prediction
+            stframe.image(frame_rgb, channels='RGB', use_column_width=True)
 
             # Remove temporary image file
             os.remove(image_path)
